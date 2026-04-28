@@ -1,0 +1,94 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String?  @map("password_hash")
+  googleId     String?  @unique @map("google_id")
+  name         String?
+  avatar       String?
+  role         String   @default("ORGANIZADOR")
+  clientId     String?  @map("client_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  raffles      Raffle[]
+  client       Client?  @relation(fields: [clientId], references: [id])
+
+  @@map("users")
+}
+
+model Raffle {
+  id               String        @id @default(uuid())
+  organizerId      String        @map("organizer_id")
+  title            String
+  prizeDescription String        @map("prize_description")
+  prizeImage       String?       @map("prize_image")
+  ticketPrice      Float         @map("ticket_price")
+  totalTickets     Int           @map("total_tickets")
+  domain           String        @unique
+  status           String        @default("draft")
+  createdAt        DateTime      @default(now()) @map("created_at")
+  organizer        User          @relation(fields: [organizerId], references: [id])
+  orders           TicketOrder[]
+  tickets          Ticket[]
+
+  @@map("raffles")
+}
+
+model Ticket {
+  id            String    @id @default(uuid())
+  raffleId      String    @map("raffle_id")
+  number        String
+  status        String    @default("available")
+  reservedUntil DateTime? @map("reserved_until")
+  buyerId       String?   @map("buyer_id")
+  raffle        Raffle    @relation(fields: [raffleId], references: [id], onDelete: Cascade)
+
+  @@unique([raffleId, number])
+  @@map("tickets")
+}
+
+model TicketOrder {
+  id           String   @id @default(uuid())
+  raffleId     String   @map("raffle_id")
+  ticketIds    String   @map("ticket_ids")
+  buyerName    String   @map("buyer_name")
+  buyerPhone   String   @map("buyer_phone")
+  buyerCity    String   @map("buyer_city")
+  receiptImage String?  @map("receipt_image")
+  status       String   @default("pending")
+  createdAt    DateTime @default(now()) @map("created_at")
+  raffle       Raffle   @relation(fields: [raffleId], references: [id], onDelete: Cascade)
+
+  @@map("ticket_orders")
+}
+
+model Client {
+  id        String    @id @default(uuid())
+  name      String
+  email     String    @unique
+  status    String    @default("active")
+  createdAt DateTime  @default(now()) @map("created_at")
+  packages  Package[]
+  users     User[]
+
+  @@map("clients")
+}
+
+model Package {
+  id        String   @id @default(uuid())
+  clientId  String   @map("client_id")
+  type      String
+  value     String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@map("packages")
+}
